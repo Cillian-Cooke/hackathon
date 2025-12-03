@@ -1,0 +1,5 @@
+# Claude API
+anthropic>=0.39.0
+
+# Environment variable management
+python-dotenv>=1.0.0

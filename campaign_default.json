@@ -1,0 +1,23 @@
+{
+  "campaign_name": "default",
+  "created": "2025-12-03T10:34:08.920529",
+  "last_played": "2025-12-03T10:37:49.865474",
+  "character": {
+    "name": "cillai",
+    "class": "fighjter",
+    "race": "human",
+    "description": "human fighjter",
+    "background": "fisherman"
+  },
+  "history": [
+    {
+      "role": "user",
+      "content": "Begin our adventure! Introduce the setting and give me my first choice."
+    },
+    {
+      "role": "assistant",
+      "content": "# Welcome, Adventurer!\n\n---\n\n## The Crossroads of Millhaven\n\nThe autumn rain falls softly as your boots splash through puddles on the cobblestone street. You've arrived in **Millhaven**, a bustling trade town nestled in a valley where three roads converge. The air smells of woodsmoke, fresh bread, and the earthy dampness of the season.\n\nWeathered buildings lean against each other like old friends\u2014a blacksmith's forge glows amber in the distance, the *Prancing Pony* tavern spills warm lamplight and boisterous laughter into the street, and a curious shop with a crescent moon carved above the door catches your eye with its mystical air.\n\nThe town is alive. Market vendors hurry to cover their wares. Merchants haggle. A few rough-looking figures eye passing travelers with dubious intent.\n\nYou've come here for **a reason**\u2014coin, refuge, a fresh start, or perhaps something called you here you can't quite explain. Whatever it is, you're here now, with little in your pockets but questions.\n\n---\n\n## Your First Choice\n\nThe rain intensifies. You need to decide quickly:\n\n**A)** Head to the *Prancing Pony* tavern\u2014warmth, information, and potential work often flow freely with ale\n\n**B)** Investigate the mysterious shop with the crescent moon\u2014perhaps magic or esoteric knowledge awaits\n\n**C)** Seek out the blacksmith's forge\u2014steady folk, and they always hear the town's secrets\n\n**D)** Something else entirely (tell me your idea!)\n\n**What do you do?**"
+    }
+  ],
+  "summary": "A new adventure begins..."
+}

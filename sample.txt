@@ -1,0 +1,14 @@
+This is a sample text file for testing the CLI!
+
+You can use this to test the 'analyze' command:
+    python cli.py analyze sample.txt
+
+Claude will read this file and tell you what it thinks about it.
+
+Try creating your own files and analyzing them:
+- Python scripts (.py)
+- Text files (.txt)
+- Markdown files (.md)
+- Any other text-based files!
+
+Have fun building your hackathon project!
