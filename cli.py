@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
 """
 Claude D&D Dungeon Master CLI - Merged Version
-
-Features:
-- Campaign folders, meta, and per-character save files
-- Structured character creation (race, class, stats)
-- Setting-aware DM system prompt
-- CLI game loop AND web integration support (setup_web_character)
+Updated to enforce EXTREME MINIMALISM (max_tokens=20) for the absolute shortest outputs.
 """
 
 import os
@@ -104,8 +99,15 @@ class DnDDungeonMaster:
     def __init__(self, campaign_name="default"):
         api_key = os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
-            print("❌ Missing ANTHROPIC_API_KEY in environment (.env).")
-            sys.exit(1)
+            # We raise a system exit error only in the CLI context; 
+            # in the web server, we let FastAPI catch it.
+            if campaign_name == "default":
+                 print("❌ Missing ANTHROPIC_API_KEY in environment (.env).")
+                 sys.exit(1)
+            else:
+                 # In web mode, raise an error that FastAPI can catch
+                 raise EnvironmentError("ANTHROPIC_API_KEY not set.")
+
 
         self.client = Anthropic(api_key=api_key)
         # Using the model name from the second (working) file's __init__ for reliability
@@ -119,13 +121,11 @@ class DnDDungeonMaster:
         self.campaign_data = None
         
         # --- Web-Compatibility Initialization ---
-        # If campaign_name is provided (usually 'web_campaign' from server.py),
-        # initialize the save structure immediately.
         if campaign_name and campaign_name != "default":
             self.current_campaign_folder = os.path.join("campaigns", safe_filename(campaign_name))
             os.makedirs(self.current_campaign_folder, exist_ok=True)
             self.load_or_create_web_campaign(campaign_name)
-            self.setup_web_character()
+            self.setup_web_character() # Ensures character data exists for initial load
 
 
     def load_or_create_web_campaign(self, campaign_name):
@@ -149,7 +149,6 @@ class DnDDungeonMaster:
     def setup_web_character(self):
         """
         Creates a single, default character file for the web client if none exists.
-        This uses the *new* per-character file structure.
         """
         web_char_name = "Brave_Web_Adventurer"
         filename = f"character_{web_char_name}.json"
@@ -158,6 +157,8 @@ class DnDDungeonMaster:
         if os.path.exists(path):
             self.save_file = path
             self.campaign_data = load_json(path)
+            # Ensure history key exists for FastAPI logic
+            self.campaign_data.setdefault("history", []) 
             self.character_name = self.campaign_data["character"]["name"]
             return # Character already set up
 
@@ -197,10 +198,6 @@ class DnDDungeonMaster:
     # ---------------------------
     # Campaign management (CLI only)
     # ---------------------------
-
-    # NOTE: These methods are preserved from the new code, but are only used 
-    # when running via the CLI (main function). The web server bypasses them 
-    # via the __init__ logic above.
 
     def select_or_create_campaign(self):
         root = "campaigns"
@@ -312,6 +309,7 @@ class DnDDungeonMaster:
                     return self.create_new_character()
                 self.save_file = full
                 self.campaign_data = data
+                self.campaign_data.setdefault("history", []) # Ensure history exists
                 self.character_name = data["character"]["name"]
                 return
             elif n == len(character_files) + 1:
@@ -408,12 +406,11 @@ class DnDDungeonMaster:
             recent = history[-25:]
             # build a focused system prompt for summarization
             system_prompt = (
-                "You are a concise D&D DM summarizer. Produce a tight 3-4 sentence recap that highlights key events, "
-                "characters, and setting-relevant changes. Keep it short and readable."
+                "You are a concise D&D DM summarizer. Produce a tight **one-sentence** recap. **Be extremely brief.**"
             )
             response = self.client.messages.create(
                 model=self.model,
-                max_tokens=200,
+                max_tokens=20, # ⬅️ FINAL CHANGE: max_tokens reduced to 20
                 system=system_prompt,
                 messages=recent + [{"role": "user", "content": "Summarize what happened recently."}]
             )
@@ -440,10 +437,10 @@ class DnDDungeonMaster:
         campaign_theme = campaign.get("theme", "Unknown")
         campaign_desc = campaign.get("description", "")
 
-        # The DM is explicitly instructed to focus on setting/worldbuilding.
+        # ⚠️ CRITICAL CHANGE: System prompt insists on 1-2 sentences only
         return (
-            "You are a concise and vivid D&D 5e Dungeon Master. Write short paragraphs with concrete sensory "
-            "details. One of your highest priorities is **MAINTAINING AND BUILDING THE SETTING**: "
+            "You are a concise and vivid D&D 5e Dungeon Master. **Your response must be no longer than 1 to 2 sentences.** "
+            "Write short paragraphs with concrete sensory details. One of your highest priorities is **MAINTAINING AND BUILDING THE SETTING**: "
             "always incorporate the campaign theme, atmosphere, technology level, culture, architecture, "
             "common dangers, typical NPC attitudes, and tone into your narration. "
             "Use the campaign description and theme to shape NPC behavior, conflicts, challenges, and scene details. "
@@ -479,13 +476,13 @@ class DnDDungeonMaster:
     def play(self):
         history = self.campaign_data.setdefault("history", [])
 
-        # Fresh intro if no history
+        # ⚠️ FIX APPLIED HERE for CLI mode: Fresh intro if no history is outside the while loop
         if not history:
             print("\n🎭 The DM prepares the opening scene...\n")
             try:
                 response = self.client.messages.create(
                     model=self.model,
-                    max_tokens=350,
+                    max_tokens=20, # ⬅️ FINAL CHANGE: max_tokens reduced to 20
                     system=self.get_dm_system_prompt(),
                     messages=[{"role": "user", "content": "Start the adventure with a short, setting-focused intro."}]
                 )
@@ -525,7 +522,7 @@ class DnDDungeonMaster:
             try:
                 response = self.client.messages.create(
                     model=self.model,
-                    max_tokens=350,
+                    max_tokens=20, # ⬅️ FINAL CHANGE: max_tokens reduced to 20
                     system=self.get_dm_system_prompt(),
                     messages=history
                 )

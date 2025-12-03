@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
 // Simple styling to improve the look slightly
@@ -26,32 +26,72 @@ const inputGroupStyle = {
     gap: '10px',
 };
 
+const metaButtonsStyle = {
+    marginBottom: '10px',
+    display: 'flex',
+    gap: '10px',
+    justifyContent: 'space-between', // Keeps reset button separate
+};
+
 const SimpleDnDApp = () => {
-    // Initial message to prompt the DM to start the scene
-    const [messages, setMessages] = useState([
-        { role: "assistant", content: "Welcome, Adventurer! Type a message to the Dungeon Master to begin your journey." },
-    ]);
+    const [messages, setMessages] = useState([]); 
     const [inputText, setInputText] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+    
+    // The fixed campaign name used by the web interface
+    const CAMPAIGN_NAME = "web_campaign"; 
 
-    const sendMessage = async (e) => {
-        // Prevent form submit behavior if button is inside a form
-        if (e) e.preventDefault(); 
-        if (!inputText.trim() || isLoading) return;
+    // --- EFFECT: Trigger DM intro on mount ---
+    useEffect(() => {
+        if (messages.length === 0 && !isLoading) {
+            sendInitialPrompt();
+        }
+    }, []); 
 
-        // 1. Add user message to history
-        const userMessage = inputText.trim();
-        const newMessages = [...messages, { role: "user", content: userMessage }];
-        setMessages(newMessages);
+    // --- NEW: Reset Campaign Handler ---
+    const handleReset = async () => {
+        if (!window.confirm("Are you sure you want to reset the entire story and character? This action cannot be undone.")) {
+            return;
+        }
 
-        // 2. Clear input and set loading state
-        setInputText("");
         setIsLoading(true);
-
-        const payload = { input: userMessage, campaign_name: "web_campaign" };
+        setMessages([{ role: "assistant", content: "⚙️ Attempting to reset campaign..." }]);
 
         try {
-            // 3. API Call to FastAPI
+            // Call the new backend reset endpoint
+            const response = await fetch("http://127.0.0.1:8000/api/reset", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ campaign_name: CAMPAIGN_NAME }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server returned status ${response.status}`);
+            }
+
+            // Reset successful, clear state and start a new game
+            setMessages([]);
+            setInputText("");
+            console.log("Campaign files deleted successfully.");
+            
+            // Re-run the initial prompt to start the new campaign
+            sendInitialPrompt(); 
+
+        } catch (err) {
+            console.error("Reset API Error:", err);
+            setMessages(prev => [...prev, { role: "assistant", content: `❌ Reset Error: ${err.message}. Check your terminal!` }]);
+            setIsLoading(false);
+        }
+    };
+    // ------------------------------------
+
+    // --- Function: Handles the initial API call to start the game ---
+    const sendInitialPrompt = async () => {
+        setIsLoading(true);
+        const initialPrompt = "Start the adventure with a short, setting-focused intro."; 
+        const payload = { input: initialPrompt, campaign_name: CAMPAIGN_NAME, initial: true };
+
+        try {
             const response = await fetch("http://127.0.0.1:8000/api/message", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -59,28 +99,74 @@ const SimpleDnDApp = () => {
             });
 
             if (!response.ok) {
-                // Handle non-200 responses (e.g., 500 server error)
                 throw new Error(`Server returned status ${response.status}`);
             }
 
             const data = await response.json();
-            
-            // 4. Add DM response to history
-            setMessages(prev => [...prev, { role: "assistant", content: data.response }]);
+            setMessages([{ role: "assistant", content: data.response }]);
             
         } catch (err) {
-            // 5. Display any fetch or network error
-            console.error("API Error:", err);
-            setMessages(prev => [...prev, { role: "assistant", content: `❌ Error communicating with DM server: ${err.message}. Check your terminal!` }]);
+            console.error("Initial API Error:", err);
+            setMessages([{ role: "assistant", content: `❌ Initialization Error: ${err.message}. Check your terminal!` }]);
         } finally {
-            // 6. Reset loading state
             setIsLoading(false);
         }
     };
 
+    // --- Central function to send messages (used by form submit and buttons) ---
+    const sendMessage = async (e, metaCommand = null) => {
+        const commandToSend = metaCommand || inputText.trim();
+        
+        if (e) e.preventDefault(); 
+        
+        if (!commandToSend || isLoading) return;
+
+        const userMessage = commandToSend;
+        const newMessages = [...messages, { role: "user", content: userMessage }];
+        setMessages(newMessages);
+
+        if (!metaCommand) {
+            setInputText("");
+        }
+
+        setIsLoading(true);
+
+        const payload = { input: userMessage, campaign_name: CAMPAIGN_NAME }; 
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/api/message", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server returned status ${response.status}`);
+            }
+
+            const data = await response.json();
+            setMessages(prev => [...prev, { role: "assistant", content: data.response }]);
+            
+        } catch (err) {
+            console.error("API Error:", err);
+            setMessages(prev => [...prev, { role: "assistant", content: `❌ Error communicating with DM server: ${err.message}. Check your terminal!` }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    // --- Function to handle button clicks (sends automatically) ---
+    const sendMetaCommand = (command) => {
+        if (isLoading) return; 
+        sendMessage(null, command);
+    };
+
+
     return (
         <div style={containerStyle}>
-            <h1>🐉 Dungeon Master CLI (Web)</h1>
+            <h1 style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                🐉 Dungeon Master CLI (Web)
+            </h1>
             <div style={messageAreaStyle}>
                 {messages.map((msg, i) => (
                     <div key={i} style={{ 
@@ -101,6 +187,65 @@ const SimpleDnDApp = () => {
                     </div>
                 )}
             </div>
+
+            {/* --- BUTTONS SECTION --- */}
+            <div style={metaButtonsStyle}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                        onClick={() => sendMetaCommand('summary')}
+                        disabled={isLoading}
+                        title="Send the 'summary' command to get a story recap"
+                        style={{ 
+                            padding: '10px 15px', 
+                            fontSize: '14px', 
+                            borderRadius: '4px', 
+                            cursor: isLoading ? 'not-allowed' : 'pointer',
+                            backgroundColor: '#52c41a', 
+                            color: 'white',
+                            border: 'none'
+                        }}
+                    >
+                        📖 Summary of Story
+                    </button>
+                    <button 
+                        onClick={() => sendMetaCommand('status')}
+                        disabled={isLoading}
+                        title="Send the 'status' command to view character details"
+                        style={{ 
+                            padding: '10px 15px', 
+                            fontSize: '14px', 
+                            borderRadius: '4px', 
+                            cursor: isLoading ? 'not-allowed' : 'pointer',
+                            backgroundColor: '#13c2c2', 
+                            color: 'white',
+                            border: 'none'
+                        }}
+                    >
+                        👤 Player Status
+                    </button>
+                </div>
+                
+                {/* --- NEW RESET BUTTON --- */}
+                <button 
+                    onClick={handleReset}
+                    disabled={isLoading}
+                    title="Delete all campaign files and start a new story."
+                    style={{ 
+                        padding: '10px 15px', 
+                        fontSize: '14px', 
+                        borderRadius: '4px', 
+                        cursor: isLoading ? 'not-allowed' : 'pointer',
+                        backgroundColor: '#ff4d4f', // Red for destructive action
+                        color: 'white',
+                        border: 'none'
+                    }}
+                >
+                    🔥 Reset Campaign
+                </button>
+                {/* --- END NEW RESET BUTTON --- */}
+
+            </div>
+            {/* --- END BUTTONS SECTION --- */}
 
             <form onSubmit={sendMessage} style={inputGroupStyle}>
                 <input
