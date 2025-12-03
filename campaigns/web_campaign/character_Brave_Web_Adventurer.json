@@ -1,0 +1,44 @@
+{
+  "character": {
+    "name": "Brave Web Adventurer",
+    "race": "Human",
+    "class": "Warrior",
+    "background": "An adventurer who arrived via a magic portal (the web browser).",
+    "stats": {
+      "Strength": 10,
+      "Dexterity": 8,
+      "Intelligence": 5,
+      "Wisdom": 5,
+      "Charisma": 2
+    },
+    "race_abilities": [
+      "Adaptable",
+      "Extra Skill Point"
+    ],
+    "class_abilities": [
+      "Power Strike",
+      "Shield Block"
+    ]
+  },
+  "created": "2025-12-03T13:16:22.603786",
+  "last_played": "2025-12-03T13:17:45.177571",
+  "history": [
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "You stand at the weathered stone gates of **Ironhold**, the kingdom's last major settlement before the untamed wilderness begins. The afternoon sun catches on the polished mail of the gate guards, their tabards bearing the royal griffin. Behind them, cobblestone streets wind between timber-framed buildings where merchants hawk their wares and blacksmiths' hammers ring against anvils.\n\nA grizzled sergeant eyes your weapons and travel gear with the practiced gaze of one who's seen too many would-be heroes march toward the frontier. \"Welcome to Ironhold, warrior,\" he says, his voice carrying equal parts respect and wariness. \"Town's been buzzing with talk of strange lights beyond the Thornwood and livestock going missing near the border farms. You looking for honest work, or are you another one bound for glory in the wilds?\"\n\nBeyond the town walls, dark pine forests stretch toward distant mountains shrouded in morning mist. The frontier calls—dangerous, untamed, but rich with opportunity for those bold enough to answer.\n\nWhat draws your attention first in this bustling border town?"
+    },
+    {
+      "role": "user",
+      "content": "hello"
+    },
+    {
+      "role": "assistant",
+      "content": "The sergeant's weathered face creases into a slight frown as you simply repeat your greeting. He exchanges a glance with his fellow guard, who shrugs and returns to watching the dusty road.\n\n\"Right then,\" the sergeant mutters, stepping aside with practiced patience born of dealing with countless travelers—some addled by the road, others struck speechless by their first glimpse of civilization after weeks in the wilderness. \"Gate's open, friend. Mind the merchants in the square—they'll smell fresh coin from a league away.\"\n\nThe sounds of Ironhold wash over you: iron-shod hooves clattering on cobblestones, the creak of wooden cart wheels, and the distant lowing of cattle being driven to market. A tavern sign—*The Griffin's Rest*—sways in the afternoon breeze just down the main thoroughfare, promising hot meals and cold ale.\n\nThe frontier town bustles around you, waiting for you to make your next move. Where do you head first?"
+    }
+  ],
+  "summary": "A new adventure begins…"
+}

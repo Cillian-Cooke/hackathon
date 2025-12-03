@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-Claude D&D Dungeon Master CLI
+Claude D&D Dungeon Master CLI - Merged Version
 
-A CLI tool where Claude acts as your Dungeon Master in D&D campaigns.
-Your adventure history is automatically saved between sessions!
-
-Author: Built with Claude for epic adventures
+Features:
+- Campaign folders, meta, and per-character save files
+- Structured character creation (race, class, stats)
+- Setting-aware DM system prompt
+- CLI game loop AND web integration support (setup_web_character)
 """
 
 import os
@@ -15,377 +16,559 @@ from datetime import datetime
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
+# ---------------------------
+# DATA TABLES
+# ---------------------------
+
+CAMPAIGN_THEMES = [
+    "Medieval Fantasy",
+    "Steampunk",
+    "Post-Apocalyptic",
+    "Sci-Fi Galactic",
+    "Ancient Mythology",
+    "Other"
+]
+
+RACES = {
+    "Human": {"abilities": ["Adaptable", "Extra Skill Point"]},
+    "Elf": {"abilities": ["Darkvision", "Keen Senses"]},
+    "Dwarf": {"abilities": ["Resilience", "Stonecunning"]},
+    "Orc": {"abilities": ["Savage Strength", "Intimidation"]},
+}
+
+CLASSES = {
+    "Warrior": {"abilities": ["Power Strike", "Shield Block"]},
+    "Mage": {"abilities": ["Spellcasting", "Arcane Shield"]},
+    "Rogue": {"abilities": ["Stealth", "Backstab"]},
+    "Engineer": {"abilities": ["Gadgeteering", "Mechanical Companion"]},
+    "Cleric": {"abilities": ["Divine Heal", "Radiant Smite"]},
+    "Other": {"abilities": []}
+}
+
+STAT_TEMPLATE = {
+    "Strength": 0,
+    "Dexterity": 0,
+    "Intelligence": 0,
+    "Wisdom": 0,
+    "Charisma": 0,
+}
+
+# ---------------------------
+# UTILITIES
+# ---------------------------
+
+def ask(prompt):
+    """Prompt and strip input."""
+    # NOTE: This function is only used in the CLI setup/play loop, not in the web API
+    return input(f"{prompt}\n> ").strip()
+
+def choose_list(options, prompt):
+    """Present a numbered list of options (list of strings) and return chosen string."""
+    # NOTE: This function is only used in the CLI setup/play loop
+    print(prompt)
+    for i, opt in enumerate(options, start=1):
+        print(f"  {i}. {opt}")
+    while True:
+        choice = ask("Choose by number:")
+        if choice.isdigit():
+            n = int(choice)
+            if 1 <= n <= len(options):
+                return options[n - 1]
+        print("Invalid choice — try again.")
+
+def safe_filename(s: str) -> str:
+    """Make a safe filename from a string."""
+    return "".join(c for c in s if c.isalnum() or c in (" ", "_", "-")).replace(" ", "_")
+
+def load_json(path):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+def write_json(path, data):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+# ---------------------------
+# MAIN CLASS
+# ---------------------------
 
 class DnDDungeonMaster:
-    """Claude as your personal D&D Dungeon Master!"""
+    """D&D CLI with setting-aware DM"""
 
     def __init__(self, campaign_name="default"):
-        """Initialize the Dungeon Master"""
-        # Get API key from environment variable
         api_key = os.getenv("ANTHROPIC_API_KEY")
-
         if not api_key:
-            print("❌ Error: ANTHROPIC_API_KEY not found!")
-            print("\n📝 To fix this:")
-            print("1. Copy .env.example to .env")
-            print("2. Add your API key from https://console.anthropic.com/")
-            print("3. Run this script again")
+            print("❌ Missing ANTHROPIC_API_KEY in environment (.env).")
             sys.exit(1)
 
-        # Create the Claude client
         self.client = Anthropic(api_key=api_key)
-        self.model = "claude-sonnet-4-20250514"
-        
-        # Campaign settings
-        self.campaign_name = campaign_name
-        self.save_file = f"campaign_{campaign_name}.json"
-        
-        # Load or create campaign
-        self.campaign_data = self.load_campaign()
+        # Using the model name from the second (working) file's __init__ for reliability
+        self.model = "claude-sonnet-4-20250514" 
 
-    def load_campaign(self):
-        """Load existing campaign or create a new one"""
-        if os.path.exists(self.save_file):
-            try:
-                with open(self.save_file, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    print(f"\n📜 Loaded campaign: {self.campaign_name}")
-                    print(f"🗓️  Last played: {data.get('last_played', 'Unknown')}")
-                    print(f"📊 Total messages: {len(data.get('history', []))}")
-                    return data
-            except Exception as e:
-                print(f"⚠️  Could not load campaign: {e}")
-                return self.create_new_campaign()
-        else:
-            print(f"\n✨ Creating new campaign: {self.campaign_name}")
-            return self.create_new_campaign()
+        # State initialization based on new structure
+        self.current_campaign_folder = None
+        self.campaign_meta = None
+        self.character_name = None
+        self.save_file = None
+        self.campaign_data = None
+        
+        # --- Web-Compatibility Initialization ---
+        # If campaign_name is provided (usually 'web_campaign' from server.py),
+        # initialize the save structure immediately.
+        if campaign_name and campaign_name != "default":
+            self.current_campaign_folder = os.path.join("campaigns", safe_filename(campaign_name))
+            os.makedirs(self.current_campaign_folder, exist_ok=True)
+            self.load_or_create_web_campaign(campaign_name)
+            self.setup_web_character()
 
-    def create_new_campaign(self):
-        """Create a new campaign data structure"""
-        return {
-            "campaign_name": self.campaign_name,
+
+    def load_or_create_web_campaign(self, campaign_name):
+        """Initializes campaign meta for web use (single file)"""
+        meta_path = os.path.join(self.current_campaign_folder, "campaign.json")
+        meta = load_json(meta_path)
+        
+        if meta is None:
+            # Create minimal campaign meta if it doesn't exist
+            meta = {
+                "name": campaign_name,
+                "theme": "Medieval Fantasy",
+                "description": "A bustling kingdom on the edge of a wild frontier.",
+                "created": datetime.now().isoformat(),
+                "last_played": datetime.now().isoformat()
+            }
+            write_json(meta_path, meta)
+        
+        self.campaign_meta = meta
+
+    def setup_web_character(self):
+        """
+        Creates a single, default character file for the web client if none exists.
+        This uses the *new* per-character file structure.
+        """
+        web_char_name = "Brave_Web_Adventurer"
+        filename = f"character_{web_char_name}.json"
+        path = os.path.join(self.current_campaign_folder, filename)
+
+        if os.path.exists(path):
+            self.save_file = path
+            self.campaign_data = load_json(path)
+            self.character_name = self.campaign_data["character"]["name"]
+            return # Character already set up
+
+        # Default stats (30 total points)
+        default_stats = STAT_TEMPLATE.copy()
+        default_stats.update({
+            "Strength": 10,
+            "Dexterity": 8,
+            "Intelligence": 5,
+            "Wisdom": 5,
+            "Charisma": 2,
+        })
+
+        data = {
+            "character": {
+                "name": web_char_name.replace("_", " "),
+                "race": "Human",
+                "class": "Warrior",
+                "background": "An adventurer who arrived via a magic portal (the web browser).",
+                "stats": default_stats,
+                "race_abilities": RACES["Human"]["abilities"],
+                "class_abilities": CLASSES["Warrior"]["abilities"],
+            },
             "created": datetime.now().isoformat(),
             "last_played": datetime.now().isoformat(),
-            "character": {},
             "history": [],
-            "summary": "A new adventure begins..."
+            "summary": "A new adventure begins…"
         }
+
+        write_json(path, data)
+        self.save_file = path
+        self.campaign_data = data
+        self.character_name = data["character"]["name"]
+        print(f"✨ Web Character '{self.character_name}' initialized.")
+
+
+    # ---------------------------
+    # Campaign management (CLI only)
+    # ---------------------------
+
+    # NOTE: These methods are preserved from the new code, but are only used 
+    # when running via the CLI (main function). The web server bypasses them 
+    # via the __init__ logic above.
+
+    def select_or_create_campaign(self):
+        root = "campaigns"
+        os.makedirs(root, exist_ok=True)
+
+        campaigns = sorted(
+            [name for name in os.listdir(root) if os.path.isdir(os.path.join(root, name))]
+        )
+
+        print("\n📚 Select a Campaign:\n")
+
+        if campaigns:
+            for i, name in enumerate(campaigns, start=1):
+                print(f"  {i}. {name}")
+        else:
+            print("  (no campaigns found)")
+
+        print(f"  {len(campaigns) + 1}. Create new campaign\n")
+
+        choice = ask("Select campaign number:")
+        if choice.isdigit():
+            n = int(choice)
+            if 1 <= n <= len(campaigns):
+                folder_name = campaigns[n - 1]
+                self.current_campaign_folder = os.path.join(root, folder_name)
+                meta = load_json(os.path.join(self.current_campaign_folder, "campaign.json"))
+                if meta is None:
+                    print("⚠️ campaign.json missing or corrupted; creating a minimal meta.")
+                    meta = {"name": folder_name, "theme": "Unknown", "description": "", "created": datetime.now().isoformat()}
+                    write_json(os.path.join(self.current_campaign_folder, "campaign.json"), meta)
+                self.campaign_meta = meta
+                print(f"\n✨ Loaded campaign: {folder_name}")
+                self.select_or_create_character()
+                return
+            elif n == len(campaigns) + 1:
+                self.create_new_campaign()
+                return
+
+        # fallback
+        print("❌ Invalid choice. Creating new campaign…")
+        self.create_new_campaign()
+
+    def create_new_campaign(self):
+        root = "campaigns"
+        os.makedirs(root, exist_ok=True)
+
+        print("\n📜 Create New Campaign\n")
+        name = ask("Campaign Name:")
+        if not name:
+            print("Campaign name required.")
+            return self.create_new_campaign()
+
+        theme = choose_list(CAMPAIGN_THEMES, "Choose a campaign theme:")
+        if theme == "Other":
+            theme = ask("Enter custom theme:")
+
+        description = ask("Short description of the setting/world (one sentence):") or f"A {theme} adventure."
+
+        safe = safe_filename(name)
+        folder = os.path.join(root, safe)
+        os.makedirs(folder, exist_ok=True)
+        self.current_campaign_folder = folder
+
+        meta = {
+            "name": name,
+            "theme": theme,
+            "description": description,
+            "created": datetime.now().isoformat(),
+            "last_played": datetime.now().isoformat()
+        }
+
+        write_json(os.path.join(folder, "campaign.json"), meta)
+        self.campaign_meta = meta
+
+        print(f"\n✨ Campaign '{name}' created with theme '{theme}'!")
+        self.select_or_create_character()
+
+    # ---------------------------
+    # Character management (CLI only)
+    # ---------------------------
+
+    def select_or_create_character(self):
+        files = os.listdir(self.current_campaign_folder)
+        character_files = [f for f in files if f.startswith("character_") and f.endswith(".json")]
+
+        print("\n🧝 Select Character:\n")
+        if character_files:
+            for i, fname in enumerate(character_files, start=1):
+                full = os.path.join(self.current_campaign_folder, fname)
+                data = load_json(full)
+                if data and "character" in data and "name" in data["character"]:
+                    print(f"  {i}. {data['character']['name']}")
+                else:
+                    print(f"  {i}. (corrupted file)")
+        else:
+            print("  (no characters found)")
+
+        print(f"  {len(character_files) + 1}. Create new character\n")
+
+        choice = ask("Select character number:")
+        if choice.isdigit():
+            n = int(choice)
+            if 1 <= n <= len(character_files):
+                filename = character_files[n - 1]
+                full = os.path.join(self.current_campaign_folder, filename)
+                data = load_json(full)
+                if not data:
+                    print("⚠️ Character file corrupted. Creating a new one instead.")
+                    return self.create_new_character()
+                self.save_file = full
+                self.campaign_data = data
+                self.character_name = data["character"]["name"]
+                return
+            elif n == len(character_files) + 1:
+                return self.create_new_character()
+
+        print("❌ Invalid choice. Creating new character…")
+        return self.create_new_character()
+
+    def create_new_character(self):
+        print("\n🎭 Create New Character\n")
+        name = ask("Character Name:")
+        if not name:
+            print("Name is required.")
+            return self.create_new_character()
+
+        race = choose_list(list(RACES.keys()), "Choose a race:")
+        clazz = choose_list(list(CLASSES.keys()), "Choose a class:")
+        background = ask("Background (one sentence, optional):") or "An adventurer seeking destiny."
+
+        print(f"\nRace Abilities: {', '.join(RACES[race]['abilities'])}")
+        print(f"Class Abilities: {', '.join(CLASSES[clazz]['abilities'])}\n")
+
+        stats = self.assign_stats()
+
+        safe = safe_filename(name)
+        filename = f"character_{safe}.json"
+        path = os.path.join(self.current_campaign_folder, filename)
+
+        self.save_file = path
+        self.character_name = name
+
+        data = {
+            "character": {
+                "name": name,
+                "race": race,
+                "class": clazz,
+                "background": background,
+                "stats": stats,
+                "race_abilities": RACES[race]["abilities"],
+                "class_abilities": CLASSES[clazz]["abilities"],
+            },
+            "created": datetime.now().isoformat(),
+            "last_played": datetime.now().isoformat(),
+            "history": [],
+            "summary": "A new adventure begins…"
+        }
+
+        write_json(path, data)
+        self.campaign_data = data
+
+        print(f"\n✨ Character '{name}' created!")
+
+    def assign_stats(self):
+        print("\nAssign 30 stat points across the following stats:")
+        remaining = 30
+        stats = STAT_TEMPLATE.copy()
+
+        for s in stats:
+            while True:
+                v = ask(f"{s} (remaining {remaining}):")
+                if v.isdigit():
+                    v_int = int(v)
+                    if 0 <= v_int <= remaining:
+                        stats[s] = v_int
+                        remaining -= v_int
+                        break
+                print("Invalid number. Enter an integer between 0 and remaining points.")
+        if remaining > 0:
+            print(f"\nYou have {remaining} unspent points; they will be distributed as +1 to Strength until used.")
+            # distribute remaining to Strength
+            stats["Strength"] += remaining
+        return stats
+
+    # ---------------------------
+    # Save & summary
+    # ---------------------------
 
     def save_campaign(self):
-        """Save campaign to file"""
+        if not self.save_file or not self.campaign_data:
+            return
+        self.campaign_data["last_played"] = datetime.now().isoformat()
+        write_json(self.save_file, self.campaign_data)
+
+    def generate_summary(self):
+        history = self.campaign_data.get("history", [])
+        if not history:
+            return "A new adventure begins…"
+
+        # Only print 'Generating summary' in CLI mode
+        if os.environ.get('TERM', '').startswith('xterm') or sys.stdin.isatty():
+             print("\n📖 Generating summary…")
+             
         try:
-            self.campaign_data["last_played"] = datetime.now().isoformat()
-            with open(self.save_file, 'w', encoding='utf-8') as f:
-                json.dump(self.campaign_data, f, indent=2)
+            recent = history[-25:]
+            # build a focused system prompt for summarization
+            system_prompt = (
+                "You are a concise D&D DM summarizer. Produce a tight 3-4 sentence recap that highlights key events, "
+                "characters, and setting-relevant changes. Keep it short and readable."
+            )
+            response = self.client.messages.create(
+                model=self.model,
+                max_tokens=200,
+                system=system_prompt,
+                messages=recent + [{"role": "user", "content": "Summarize what happened recently."}]
+            )
+            summary = response.content[0].text.strip()
+            self.campaign_data["summary"] = summary
+            self.save_campaign()
+            return summary
         except Exception as e:
-            print(f"⚠️  Warning: Could not save campaign: {e}")
+            # Only print error in CLI mode
+            if os.environ.get('TERM', '').startswith('xterm') or sys.stdin.isatty():
+                 print("⚠️ Summary generation failed:", e)
+            return self.campaign_data.get("summary", "Adventure continues…")
+
+    # ---------------------------
+    # DM System prompt (SETTING-AWARE)
+    # ---------------------------
 
     def get_dm_system_prompt(self):
-        """Create the system prompt that makes Claude act as a DM"""
-        prompt = """You are an expert Dungeon Master for Dungeons & Dragons 5th Edition. Your role is to:
+        # Guard rails: campaign_meta may be missing
+        campaign = self.campaign_meta or {}
+        char = self.campaign_data.get("character", {}) if self.campaign_data else {}
+        summary = self.campaign_data.get("summary", "") if self.campaign_data else ""
 
-1. Create immersive, engaging narratives with rich descriptions
-2. Follow D&D 5e rules but prioritize fun over rigid rule enforcement
-3. Respond to player actions with appropriate consequences
-4. Ask for dice rolls when needed (use standard D&D format like "Roll a d20 for Perception")
-5. Keep track of important details about the world and story
-6. Be creative and adapt to player choices
-7. Use vivid descriptions to bring scenes to life
-8. Include NPCs with distinct personalities
-9. Balance combat, exploration, and roleplay
+        campaign_theme = campaign.get("theme", "Unknown")
+        campaign_desc = campaign.get("description", "")
 
-Style:
-- Be descriptive but concise
-- Use emotive language to set mood
-- Ask clarifying questions if player intent is unclear
-- Celebrate creative solutions
-- Make failures interesting, not just dead ends
+        # The DM is explicitly instructed to focus on setting/worldbuilding.
+        return (
+            "You are a concise and vivid D&D 5e Dungeon Master. Write short paragraphs with concrete sensory "
+            "details. One of your highest priorities is **MAINTAINING AND BUILDING THE SETTING**: "
+            "always incorporate the campaign theme, atmosphere, technology level, culture, architecture, "
+            "common dangers, typical NPC attitudes, and tone into your narration. "
+            "Use the campaign description and theme to shape NPC behavior, conflicts, challenges, and scene details. "
+            "If the players introduce something that conflicts with the established setting, treat it as a notable anomaly "
+            "and hint at consequences or lore.\n\n"
+            f"Campaign Theme: {campaign_theme}\n"
+            f"Campaign Description: {campaign_desc}\n\n"
+            f"Current Summary: {summary}\n"
+            f"Player Character: {char.get('name', 'Unknown')} — {char.get('race','')} {char.get('class','')}\n"
+        )
 
-Remember: You're here to help the player have an epic adventure!"""
-
-        # Add campaign context if there's history
-        if self.campaign_data["history"]:
-            prompt += f"\n\nCampaign Summary: {self.campaign_data['summary']}"
-            
-            if self.campaign_data.get("character"):
-                char = self.campaign_data["character"]
-                prompt += f"\n\nPlayer Character: {char.get('name', 'Unknown')} - {char.get('description', 'No description')}"
-
-        return prompt
+    # ---------------------------
+    # Game loop (CLI only)
+    # ---------------------------
 
     def start_adventure(self):
-        """Start or continue the D&D adventure"""
-        print("\n" + "="*60)
-        print("🎲  WELCOME TO YOUR D&D ADVENTURE  🎲")
-        print("="*60)
-        
-        # Character setup if new campaign
-        if not self.campaign_data.get("character"):
-            self.setup_character()
-        else:
-            char = self.campaign_data["character"]
-            print(f"\n⚔️  Welcome back, {char.get('name', 'Adventurer')}!")
-        
-        print("\n📖 Commands:")
-        print("  - Type your actions naturally")
-        print("  - Type 'status' to see your character")
-        print("  - Type 'summary' for story recap")
-        print("  - Type 'quit' or 'exit' to end session")
-        print("\n" + "="*60 + "\n")
+        print("\n🎲 Welcome to your D&D Adventure!")
+        self.select_or_create_campaign()
 
-        # Start the interactive session
+        # Load an empty campaign_data if none (shouldn't happen but safe)
+        if self.campaign_data is None:
+            # create a fallback character
+            print("No character loaded — creating a quick default character.")
+            self.create_new_character()
+
+        if self.campaign_data.get("history"):
+            print("\n📖 Story so far:")
+            print(self.campaign_data.get("summary", "A new adventure begins…"))
+
+        print("\nCommands: status | summary | quit\n")
         self.play()
 
-    def setup_character(self):
-        """Quick character creation"""
-        print("\n🎭 Let's create your character!\n")
-        
-        name = input("Character Name: ").strip() or "Mysterious Adventurer"
-        char_class = input("Class (Fighter/Wizard/Rogue/Cleric/etc.): ").strip() or "Fighter"
-        race = input("Race (Human/Elf/Dwarf/etc.): ").strip() or "Human"
-        background = input("Brief background (optional): ").strip() or "A brave soul seeking adventure"
-        
-        self.campaign_data["character"] = {
-            "name": name,
-            "class": char_class,
-            "race": race,
-            "description": f"{race} {char_class}",
-            "background": background
-        }
-        
-        print(f"\n✨ {name} the {race} {char_class} is ready for adventure!\n")
-        self.save_campaign()
-
     def play(self):
-        """Main game loop"""
-        history = self.campaign_data["history"]
-        
-        # If new game, DM introduces the adventure
+        history = self.campaign_data.setdefault("history", [])
+
+        # Fresh intro if no history
         if not history:
-            print("🎭 Dungeon Master: Let me set the scene...\n")
-            
+            print("\n🎭 The DM prepares the opening scene...\n")
             try:
                 response = self.client.messages.create(
                     model=self.model,
-                    max_tokens=2048,
+                    max_tokens=350,
                     system=self.get_dm_system_prompt(),
-                    messages=[{
-                        "role": "user",
-                        "content": "Begin our adventure! Introduce the setting and give me my first choice."
-                    }]
+                    messages=[{"role": "user", "content": "Start the adventure with a short, setting-focused intro."}]
                 )
-                
-                dm_response = response.content[0].text
-                print(f"🎭 DM: {dm_response}\n")
-                
-                # Save this opening
-                history.append({"role": "user", "content": "Begin our adventure! Introduce the setting and give me my first choice."})
-                history.append({"role": "assistant", "content": dm_response})
+                dm_text = response.content[0].text
+                print(f"🎭 DM: {dm_text}\n")
+                history.append({"role": "assistant", "content": dm_text})
                 self.save_campaign()
-                
             except Exception as e:
-                print(f"❌ Error: {str(e)}")
+                print("❌ Failed to contact DM API:", e)
                 return
 
-        # Main game loop
+        # Main interaction loop
         while True:
-            user_input = input("\n⚔️  You: ").strip()
-
+            user_input = input("\n⚔️ You: ").strip()
             if not user_input:
                 continue
 
-            # Handle special commands
-            if user_input.lower() in ['quit', 'exit', 'bye']:
-                print("\n🌙 The adventure pauses here... Your progress has been saved!")
-                print("👋 Until next time, brave adventurer!")
-                self.save_campaign()
+            cmd = user_input.lower().strip()
+            if cmd in ("quit", "exit"):
+                print("\n🌙 Saving and exiting…")
+                summary = self.generate_summary()
+                print("\n📖 Final Summary:\n", summary)
+                print("\n👋 Farewell, adventurer.")
                 break
 
-            if user_input.lower() == 'status':
+            if cmd == "status":
                 self.show_status()
                 continue
 
-            if user_input.lower() == 'summary':
-                print(f"\n📖 Campaign Summary:\n{self.campaign_data['summary']}\n")
+            if cmd == "summary":
+                print("\n📖 Summary:\n", self.generate_summary())
                 continue
 
-            # Add user action to history
-            history.append({
-                "role": "user",
-                "content": user_input
-            })
+            # Regular gameplay input appended to history
+            history.append({"role": "user", "content": user_input})
 
             try:
-                # Get DM response
                 response = self.client.messages.create(
                     model=self.model,
-                    max_tokens=2048,
+                    max_tokens=350,
                     system=self.get_dm_system_prompt(),
                     messages=history
                 )
-
-                dm_response = response.content[0].text
-                
-                # Add DM response to history
-                history.append({
-                    "role": "assistant",
-                    "content": dm_response
-                })
-
-                # Display response
-                print(f"\n🎭 DM: {dm_response}")
-
-                # Save after each exchange
+                dm_text = response.content[0].text
+                print(f"\n🎭 DM: {dm_text}")
+                history.append({"role": "assistant", "content": dm_text})
                 self.save_campaign()
-
-                # Update summary periodically (every 10 exchanges)
-                if len(history) % 20 == 0:
-                    self.update_summary()
-
             except Exception as e:
-                print(f"\n❌ Error: {str(e)}")
-                # Remove the last user message if there was an error
-                if history and history[-1]["role"] == "user":
+                print("\n❌ Error while contacting DM API:", e)
+                # rollback user message to avoid corrupt history
+                if history and history[-1].get("role") == "user" and history[-1].get("content") == user_input:
                     history.pop()
                 break
 
+    # ---------------------------
+    # Status screen
+    # ---------------------------
+
     def show_status(self):
-        """Display character status"""
         char = self.campaign_data.get("character", {})
-        print("\n" + "="*40)
-        print("📋 CHARACTER STATUS")
-        print("="*40)
+        print("\n📋 CHARACTER STATUS")
         print(f"Name: {char.get('name', 'Unknown')}")
         print(f"Race: {char.get('race', 'Unknown')}")
         print(f"Class: {char.get('class', 'Unknown')}")
-        print(f"Background: {char.get('background', 'Unknown')}")
-        print("="*40 + "\n")
+        print(f"Background: {char.get('background', '')}\n")
+        stats = char.get("stats", {})
+        if stats:
+            print("Stats:")
+            for k, v in stats.items():
+                print(f"  {k}: {v}")
+        print("\nAbilities:")
+        print("  Race:", ", ".join(char.get("race_abilities", [])) or "(none)")
+        print("  Class:", ", ".join(char.get("class_abilities", [])) or "(none)")
+        print("")
 
-    def update_summary(self):
-        """Generate a summary of recent events"""
-        try:
-            recent_history = self.campaign_data["history"][-10:]
-            
-            summary_request = [{
-                "role": "user",
-                "content": "Provide a brief 2-3 sentence summary of the most important events that have happened in our adventure so far."
-            }]
-            
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=300,
-                system="You are a D&D Dungeon Master. Summarize the adventure concisely.",
-                messages=recent_history + summary_request
-            )
-            
-            self.campaign_data["summary"] = response.content[0].text
-            
-        except Exception as e:
-            print(f"⚠️  Could not update summary: {e}")
-
-
-def print_help():
-    """Display help information"""
-    print("""
-╔═══════════════════════════════════════════════════════════╗
-║       🎲 D&D Dungeon Master CLI - Help Guide  🎲          ║
-╚═══════════════════════════════════════════════════════════╝
-
-📖 Available Commands:
-
-  python dnd_dungeon_master.py play [campaign_name]
-      Start or continue a D&D adventure
-      Example: python dnd_dungeon_master.py play
-      Example: python dnd_dungeon_master.py play dragon_heist
-
-  python dnd_dungeon_master.py campaigns
-      List all saved campaigns
-
-  python dnd_dungeon_master.py help
-      Show this help message
-
-╔═══════════════════════════════════════════════════════════╗
-║  🎮 In-Game Commands                                      ║
-╚═══════════════════════════════════════════════════════════╝
-
-  status  - View your character sheet
-  summary - Get a recap of your adventure
-  quit    - Save and exit the game
-
-╔═══════════════════════════════════════════════════════════╗
-║  💡 Tips                                                  ║
-╚═══════════════════════════════════════════════════════════╝
-
-• Your adventure is automatically saved after each action
-• Be descriptive with your actions for better responses
-• Claude will ask you to roll dice when needed
-• Have fun and be creative!
-
-🎲 May your rolls be high and your adventures epic! 🎲
-""")
-
-
-def list_campaigns():
-    """List all saved campaigns"""
-    campaigns = [f for f in os.listdir('.') if f.startswith('campaign_') and f.endswith('.json')]
-    
-    if not campaigns:
-        print("\n📭 No saved campaigns found.")
-        print("Start a new adventure with: python dnd_dungeon_master.py play\n")
-        return
-    
-    print("\n📚 Saved Campaigns:\n")
-    for campaign_file in campaigns:
-        try:
-            with open(campaign_file, 'r') as f:
-                data = json.load(f)
-                name = data.get('campaign_name', 'Unknown')
-                last_played = data.get('last_played', 'Unknown')
-                messages = len(data.get('history', []))
-                char_name = data.get('character', {}).get('name', 'No character')
-                
-                print(f"  🎲 {name}")
-                print(f"     Character: {char_name}")
-                print(f"     Last played: {last_played}")
-                print(f"     Progress: {messages} messages")
-                print()
-        except:
-            continue
-
+# ---------------------------
+# ENTRY POINT
+# ---------------------------
 
 def main():
-    """Main entry point for the CLI"""
-
-    # Check if user provided any arguments
-    if len(sys.argv) < 2:
-        command = 'play'
-        campaign_name = 'default'
-    else:
-        command = sys.argv[1].lower()
-        campaign_name = sys.argv[2] if len(sys.argv) > 2 else 'default'
-
-    # Handle help command
-    if command in ['help', '-h', '--help']:
-        print_help()
-        sys.exit(0)
-
-    # Handle campaigns list
-    if command == 'campaigns':
-        list_campaigns()
-        sys.exit(0)
-
-    # Handle play command
-    if command == 'play':
-        dm = DnDDungeonMaster(campaign_name=campaign_name)
-        dm.start_adventure()
-    else:
-        print(f"\n❌ Error: Unknown command '{command}'")
-        print_help()
-        sys.exit(1)
-
+    # This main function is only for the CLI usage
+    dm = DnDDungeonMaster()
+    dm.start_adventure()
 
 if __name__ == "__main__":
     main()
