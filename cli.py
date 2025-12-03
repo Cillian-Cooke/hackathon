@@ -37,7 +37,7 @@ class DnDDungeonMaster:
 
         # Create the Claude client
         self.client = Anthropic(api_key=api_key)
-        self.model = "claude-haiku-4-5"
+        self.model = "claude-sonnet-4-20250514"
         
         # Campaign settings
         self.campaign_name = campaign_name
@@ -296,15 +296,15 @@ def print_help():
 
 📖 Available Commands:
 
-  python cli.py play [campaign_name]
+  python dnd_dungeon_master.py play [campaign_name]
       Start or continue a D&D adventure
-      Example: python cli.py play
-      Example: python cli.py play dragon_heist
+      Example: python dnd_dungeon_master.py play
+      Example: python dnd_dungeon_master.py play dragon_heist
 
-  python cli.py campaigns
+  python dnd_dungeon_master.py campaigns
       List all saved campaigns
 
-  python cli.py help
+  python dnd_dungeon_master.py help
       Show this help message
 
 ╔═══════════════════════════════════════════════════════════╗
@@ -334,7 +334,7 @@ def list_campaigns():
     
     if not campaigns:
         print("\n📭 No saved campaigns found.")
-        print("Start a new adventure with: python cli.py play\n")
+        print("Start a new adventure with: python dnd_dungeon_master.py play\n")
         return
     
     print("\n📚 Saved Campaigns:\n")
