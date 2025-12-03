@@ -1,0 +1,32 @@
+{
+  "character": {
+    "name": "Brave Web Adventurer",
+    "race": "Human",
+    "class": "Warrior",
+    "background": "An adventurer who arrived via a magic portal (the web browser).",
+    "stats": {
+      "Strength": 10,
+      "Dexterity": 8,
+      "Intelligence": 5,
+      "Wisdom": 5,
+      "Charisma": 2
+    },
+    "race_abilities": [
+      "Adaptable",
+      "Extra Skill Point"
+    ],
+    "class_abilities": [
+      "Power Strike",
+      "Shield Block"
+    ]
+  },
+  "created": "2025-12-03T21:06:41.322172",
+  "last_played": "2025-12-03T21:06:45.988269",
+  "history": [
+    {
+      "role": "assistant",
+      "content": "The cobblestones of Ironhold's main thoroughfare clatter beneath your boots as merchants hawk their wares and frontier scouts share tales of the untamed wilds beyond the kingdom's borders. Castle banners snap in the autumn wind above timber-framed shops, while weathered adventurers eye the job board outside the Crossed Swords tavern—each posting promising coin for those brave enough to venture where the king's law grows thin."
+    }
+  ],
+  "summary": "A new adventure begins…"
+}
