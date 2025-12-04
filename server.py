@@ -1,13 +1,30 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-from fastapi.middleware.cors import CORSMiddleware
-from cli import DnDDungeonMaster 
-import json
-import traceback
-import os
-import shutil
+"""
+FastAPI server for the D&D Dungeon Master web application.
 
-app = FastAPI()
+Provides REST endpoints for game messaging and campaign management,
+bridging the web client with the Gemini-powered DM engine.
+"""
+
+import os
+import traceback
+from typing import Optional
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from google.genai import types
+from pydantic import BaseModel, Field
+
+from cli import DnDDungeonMaster
+
+# =============================================================================
+# Application Setup
+# =============================================================================
+
+app = FastAPI(
+    title="D&D Dungeon Master API",
+    description="REST API for the AI-powered Dungeon Master game",
+    version="1.0.0",
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,106 +33,213 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# =============================================================================
+# Request/Response Models
+# =============================================================================
+
+
 class MessageRequest(BaseModel):
-    input: str
-    campaign_name: str = "web_campaign"
-    initial: bool = False
+    """Request model for sending a message to the DM."""
+
+    input: str = Field(..., description="The player's input message")
+    campaign_name: str = Field(default="web_campaign", description="Campaign identifier")
+    initial: bool = Field(default=False, description="Whether this is the initial game prompt")
+
 
 class ResetRequest(BaseModel):
-    campaign_name: str
+    """Request model for resetting a campaign."""
 
-dm_instances = {}
+    campaign_name: str = Field(..., description="Campaign identifier to reset")
 
-@app.post("/api/message")
-def send_message(req: MessageRequest):
-    campaign = req.campaign_name
-    
-    if campaign not in dm_instances:
+
+class MessageResponse(BaseModel):
+    """Response model for DM messages."""
+
+    response: str
+
+
+class ResetResponse(BaseModel):
+    """Response model for campaign reset."""
+
+    status: str
+    detail: str
+
+
+# =============================================================================
+# DM Instance Management
+# =============================================================================
+
+_dm_instances: dict[str, DnDDungeonMaster] = {}
+
+
+def get_dm_instance(campaign_name: str) -> DnDDungeonMaster:
+    """
+    Retrieves or creates a DM instance for the specified campaign.
+
+    Args:
+        campaign_name: The campaign identifier.
+
+    Returns:
+        The DnDDungeonMaster instance for the campaign.
+
+    Raises:
+        RuntimeError: If DM initialization fails.
+    """
+    if campaign_name not in _dm_instances:
         try:
-            dm_instances[campaign] = DnDDungeonMaster(campaign_name=campaign)
+            _dm_instances[campaign_name] = DnDDungeonMaster(campaign_name=campaign_name)
         except Exception as e:
-            return {"response": f"❌ DM INIT ERROR: {str(e)}"}
-            
-    dm = dm_instances[campaign]
-    
+            raise RuntimeError(f"Failed to initialize DM: {e}") from e
+
+    return _dm_instances[campaign_name]
+
+
+def remove_dm_instance(campaign_name: str) -> None:
+    """Removes a DM instance from memory."""
+    _dm_instances.pop(campaign_name, None)
+
+
+# =============================================================================
+# Gemini API Helpers
+# =============================================================================
+
+
+def convert_history_to_gemini_format(history: list[dict]) -> list[types.Content]:
+    """
+    Converts internal message history to Gemini SDK format.
+
+    Args:
+        history: List of message dicts with 'role' and 'content' keys.
+
+    Returns:
+        List of Gemini Content objects.
+    """
+    contents = []
+    for message in history:
+        role = "model" if message["role"] == "assistant" else message["role"]
+        text_part = types.Part(text=message["content"])
+        contents.append(types.Content(role=role, parts=[text_part]))
+    return contents
+
+
+def generate_dm_response(dm: DnDDungeonMaster, contents: list[types.Content]) -> str:
+    """
+    Generates a response from the Gemini model.
+
+    Args:
+        dm: The DungeonMaster instance.
+        contents: The conversation history in Gemini format.
+
+    Returns:
+        The generated response text.
+    """
+    response = dm.client.models.generate_content(
+        model=dm.model,
+        contents=contents,
+        config=types.GenerateContentConfig(
+            system_instruction=dm.get_dm_system_prompt(),
+            max_output_tokens=2048,
+        ),
+    )
+    return response.text
+
+
+# =============================================================================
+# API Endpoints
+# =============================================================================
+
+
+@app.post("/api/message", response_model=MessageResponse)
+def send_message(req: MessageRequest) -> MessageResponse:
+    """
+    Processes a player message and returns the DM's response.
+
+    The endpoint manages conversation history, ensuring proper message
+    sequencing for the Gemini API.
+    """
+    try:
+        dm = get_dm_instance(req.campaign_name)
+    except RuntimeError as e:
+        return MessageResponse(response=f"❌ DM INIT ERROR: {e}")
+
+    # Ensure character exists
     if not dm.campaign_data.get("character"):
         dm.setup_web_character()
 
+    history = dm.campaign_data["history"]
+
+    # Append user input to history (skip for initial setup message)
     if not req.initial:
-        dm.campaign_data["history"].append({"role": "user", "content": req.input})
-    
-    messages_to_send = dm.campaign_data["history"].copy()
-    
+        history.append({"role": "user", "content": req.input})
+
+    # Prepare messages for Gemini API
+    messages_to_send = history.copy()
     if req.initial:
         messages_to_send.append({"role": "user", "content": req.input})
-    
+
+    gemini_contents = convert_history_to_gemini_format(messages_to_send)
+
     try:
-        response = dm.client.messages.create(
-            model=dm.model,
-            max_tokens=2048,
-            system=dm.get_dm_system_prompt(),
-            messages=messages_to_send
-        )
-        
-        dm_response = response.content[0].text
-        
-        dm.campaign_data["history"].append({"role": "assistant", "content": dm_response})
+        dm_response = generate_dm_response(dm, gemini_contents)
+        history.append({"role": "assistant", "content": dm_response})
         dm.save_campaign()
-        
-        return {"response": dm_response}
-    
+        return MessageResponse(response=dm_response)
+
     except Exception as e:
-        print("\n--- ANTHROPIC API ERROR ---")
+        print("\n--- GEMINI API ERROR ---")
         traceback.print_exc()
-        print("---------------------------\n")
-        
-        if not req.initial and dm.campaign_data["history"] and dm.campaign_data["history"][-1]["role"] == "user":
-            dm.campaign_data["history"].pop() 
+        print("------------------------\n")
 
-        return {"response": f"❌ API Error: {str(e)}. Check Uvicorn terminal for details."}
+        # Rollback user message on failure
+        if not req.initial and history and history[-1]["role"] == "user":
+            history.pop()
+
+        return MessageResponse(
+            response=f"❌ API Error: {e}. Check Uvicorn terminal for details."
+        )
 
 
+@app.post("/api/reset", response_model=ResetResponse)
+def reset_campaign(req: ResetRequest) -> ResetResponse:
+    """
+    Fully resets a campaign by removing the entire campaign folder.
 
-@app.post("/api/reset")
-def reset_campaign(req: ResetRequest):
-    campaign = req.campaign_name
+    This ensures a completely fresh start with new character, setting,
+    and story - preventing repetitive gameplay.
+    """
+    import shutil
 
-    # 1. Remove DM from memory
-    if campaign in dm_instances:
-        del dm_instances[campaign]
+    campaign_dir = os.path.join("campaigns", req.campaign_name)
 
-    # 2. Compute folder path
-    campaign_dir = os.path.join("campaigns", campaign)
+    # Clear from memory
+    remove_dm_instance(req.campaign_name)
 
+    # Check if directory exists
     if not os.path.exists(campaign_dir):
-        return {
-            "status": "success",
-            "detail": f"No folder found at {campaign_dir}, nothing to delete."
-        }
+        return ResetResponse(
+            status="success",
+            detail=f"No folder found at {campaign_dir}, nothing to delete.",
+        )
 
-    deleted_files = []
+    # Delete entire campaign folder and all contents
+    try:
+        shutil.rmtree(campaign_dir)
+        return ResetResponse(
+            status="success",
+            detail=f"Completely reset campaign: deleted {campaign_dir} and all contents.",
+        )
+    except OSError as e:
+        return ResetResponse(
+            status="error",
+            detail=f"Failed to delete campaign folder: {e}",
+        )
 
-    # 3. Delete only JSON files inside this directory
-    for file in os.listdir(campaign_dir):
-        if file.endswith(".json"):
-            full_path = os.path.join(campaign_dir, file)
-            try:
-                os.remove(full_path)
-                deleted_files.append(full_path)
-            except Exception as e:
-                return {
-                    "status": "error",
-                    "detail": f"Failed to delete {full_path}: {str(e)}"
-                }
-
-    # 4. Delete folder if it's now empty
+    # Remove empty directory
     try:
         if not os.listdir(campaign_dir):
             os.rmdir(campaign_dir)
-    except Exception as e:
-        pass  # folder might not be empty, that's fine
+    except OSError:
+        pass  # Directory not empty or other issue; ignore
 
-    return {
-        "status": "success",
-        "detail": f"Deleted: {deleted_files if deleted_files else 'No JSON files found'}"
-    }
+    detail = f"Deleted: {deleted_files}" if deleted_files else "No JSON files found"
+    return ResetResponse(status="success", detail=detail)

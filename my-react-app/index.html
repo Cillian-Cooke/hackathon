@@ -1,27 +1,121 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>D&D Adventure Web Client</title>
-    <style>
-      /* Reset margins and ensure full viewport */
-      html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        background: linear-gradient(135deg, #1e1b4b, #312e81, #0f172a); /* Cool purple-blue gradient */
-        
-      }
+<head>
+  <!-- Character Encoding & Viewport -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Document Metadata -->
+  <title>D&D Dungeon Master</title>
+  <meta name="description" content="An AI-powered Dungeon Master for interactive D&D adventures">
+  <meta name="author" content="D&D Adventure Team">
+  
+  <!-- Theme Color (for mobile browsers) -->
+  <meta name="theme-color" content="#1e1b4b">
+  <meta name="color-scheme" content="dark light">
+  
+  <!-- Favicon (uncomment and update path when available) -->
+  <!-- <link rel="icon" type="image/svg+xml" href="/favicon.svg"> -->
+  <!-- <link rel="icon" type="image/png" href="/favicon.png"> -->
+  
+  <!-- Preconnect to API server (improves initial connection time) -->
+  <link rel="preconnect" href="http://127.0.0.1:8000">
+  
+  <!-- Critical CSS (prevents flash of unstyled content) -->
+  <style>
+    /* Base Reset & Loading State */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
 
-      #app {
-        height: 100%; /* Ensure the React root takes full height */
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        'Segoe UI',
+        Roboto,
+        Oxygen,
+        Ubuntu,
+        Cantarell,
+        sans-serif;
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #0f172a 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+    }
+
+    #app {
+      height: 100%;
+      min-height: 100vh;
+    }
+
+    /* Initial Loading State (shown before React hydrates) */
+    .app-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 1.125rem;
+    }
+
+    .app-loading::after {
+      content: 'Loading adventure...';
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    /* Hide loading state once React mounts */
+    #app:not(:empty) .app-loading {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- React Application Root -->
+  <div id="app">
+    <!-- Loading indicator (removed by React on mount) -->
+    <div class="app-loading"></div>
+  </div>
+
+  <!-- Application Entry Point -->
+  <script type="module" src="/src/main.jsx"></script>
+
+  <!-- NoScript Fallback -->
+  <noscript>
+    <style>
+      .app-loading { display: none !important; }
+      .noscript-message {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        padding: 2rem;
+        text-align: center;
+        color: white;
+        font-size: 1.125rem;
+        line-height: 1.6;
       }
     </style>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+    <div class="noscript-message">
+      <p>
+        🐉 <strong>D&D Dungeon Master</strong> requires JavaScript to run.<br>
+        Please enable JavaScript in your browser settings to begin your adventure.
+      </p>
+    </div>
+  </noscript>
+</body>
 </html>

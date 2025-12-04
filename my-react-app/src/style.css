@@ -1,239 +1,444 @@
+/**
+ * D&D Dungeon Master Web Client - Stylesheet
+ * 
+ * A dark-first theme system with light mode support.
+ * Uses CSS custom properties for consistent theming.
+ */
+
+/* =============================================================================
+   CSS Custom Properties (Design Tokens)
+   ============================================================================= */
+
 :root {
-    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    font-size: 15px; 
-    font-weight: 400;
+  /* Typography */
+  --font-family-base: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 
+                      Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-size-base: 15px;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --line-height-base: 1.5;
 
-    color-scheme: light dark;
-    /* Default is dark mode in this setup */
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #242424;
+  /* Spacing Scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 10px;
+  --space-lg: 15px;
+  --space-xl: 20px;
 
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 20px;
+  --radius-full: 34px;
 
-    /* --- THEME COLORS (CSS Variables - DARK MODE DEFAULTS) --- */
-    --main-bg: #2d2d2d;
-    --body-bg: #1e1e1e;
-    --text-color: #f0f0f0;
-    --border-color: #444;
-    --user-msg-bg: #3a3a3a;
-    --dm-msg-bg: #333;
-    --user-msg-border: #647DE5;
-    --dm-msg-border: #00BCD4;
-    --send-btn: #647DE5;
-    --reset-btn: #ff4d4f;
-    --summary-btn: #52c41a;
-    --status-btn: #13c2c2;
-    --shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+  /* Transitions */
+  --transition-fast: 0.25s ease;
+  --transition-base: 0.3s ease;
+  --transition-slow: 0.4s ease;
+
+  /* Layout */
+  --container-max-width: 850px;
+  --message-area-height: 550px;
+
+  /* Dark Theme (Default) */
+  --color-bg-body: #1e1e1e;
+  --color-bg-main: #2d2d2d;
+  --color-bg-surface: #242424;
+  --color-text-primary: #f0f0f0;
+  --color-text-secondary: rgba(255, 255, 255, 0.87);
+  --color-border: #444;
+
+  /* Message Colors - Dark */
+  --color-msg-user-bg: #3a3a3a;
+  --color-msg-user-border: #647DE5;
+  --color-msg-dm-bg: #333;
+  --color-msg-dm-border: #00BCD4;
+
+  /* Button Colors */
+  --color-btn-send: #647DE5;
+  --color-btn-reset: #ff4d4f;
+  --color-btn-summary: #52c41a;
+  --color-btn-status: #13c2c2;
+
+  /* Effects */
+  --shadow-elevated: 0 8px 16px rgba(0, 0, 0, 0.5);
+
+  /* Links */
+  --color-link: #646cff;
+  --color-link-hover: #535bf2;
+
+  /* Focus Ring */
+  --color-focus: #646cff;
+
+  /* Color Scheme */
+  color-scheme: light dark;
 }
 
+/* Light Theme Overrides */
 .light-mode {
-    /* LIGHT MODE OVERRIDES - Applied to the body tag */
-    --main-bg: white;
-    --body-bg: #f0f2f5;
-    --text-color: #1f1f1f;
-    --border-color: #e0e0e0;
-    --user-msg-bg: #e6f7ff;
-    --dm-msg-bg: #fff0e6;
-    --user-msg-border: #1890ff;
-    --dm-msg-border: #fa8c16;
-    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --color-bg-body: #f0f2f5;
+  --color-bg-main: #ffffff;
+  --color-bg-surface: #ffffff;
+  --color-text-primary: #1f1f1f;
+  --color-text-secondary: #333333;
+  --color-border: #e0e0e0;
+
+  --color-msg-user-bg: #e6f7ff;
+  --color-msg-user-border: #1890ff;
+  --color-msg-dm-bg: #fff0e6;
+  --color-msg-dm-border: #fa8c16;
+
+  --shadow-elevated: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-a {
-    font-weight: 500;
-    color: #646cff;
-    text-decoration: inherit;
+/* =============================================================================
+   Base Styles & Reset
+   ============================================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
-a:hover {
-    color: #535bf2;
+
+html {
+  font-size: var(--font-size-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-synthesis: none;
 }
 
 body {
-    margin: 0;
-    display: flex;
-    place-items: center;
-    min-width: 320px;
-    min-height: 100vh; /* <-- ENSURE body takes full height */
-    /* Allow body background to be controlled by the React component */
-    background-color: var(--body-bg); 
-    transition: background-color 0.3s;
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-family-base);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-base);
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-body);
+  transition: background-color var(--transition-base);
 }
+
+/* =============================================================================
+   Typography
+   ============================================================================= */
 
 h1 {
-    font-size: 3.2em;
-    line-height: 1.1;
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  color: var(--color-text-primary);
 }
+
+a {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-link);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-link-hover);
+}
+
+/* =============================================================================
+   Layout Components
+   ============================================================================= */
 
 #app {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 0; /* Remove padding here if it causes overflow */
-    text-align: center;
-    /* ADDED: Ensure #app wrapper covers full height and width of the body */
-    min-height: 100vh;
-    width: 100%; 
-    display: flex; /* Helps center the content inside the wrapper */
-    flex-direction: column; /* Stacks children vertically */
-    align-items: center; /* Centers items horizontally */
-    justify-content: flex-start; /* Aligns content to the top */
+  width: 100%;
+  min-height: 100vh;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
 }
 
-/* --- Component Layout & Structure --- */
 .dnd-container {
-    /* 👈 CHANGE 1: Reduced maximum width for a slightly narrower box (e.g., from 950px to 850px) */
-    max-width: 850px; 
-    margin: 20px 0; 
-    padding: 20px; 
-    border-radius: 8px;
-    transition: background-color 0.3s, color 0.3s, box-shadow 0.3s;
-    background-color: var(--main-bg);
-    color: var(--text-color);
-    box-shadow: var(--shadow);
-    width: calc(100% - 40px);
-    box-sizing: border-box; 
+  width: calc(100% - 40px);
+  max-width: var(--container-max-width);
+  margin: var(--space-xl) 0;
+  padding: var(--space-xl);
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-main);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-elevated);
+  transition: 
+    background-color var(--transition-base),
+    color var(--transition-base),
+    box-shadow var(--transition-base);
 }
+
+/* =============================================================================
+   Header
+   ============================================================================= */
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xl);
+}
+
+/* =============================================================================
+   Theme Toggle
+   ============================================================================= */
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 24px;
+  margin: 0 5px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  background-color: var(--color-border);
+  border-radius: var(--radius-full);
+  transition: background-color var(--transition-slow);
+}
+
+.slider::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  width: 16px;
+  height: 16px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform var(--transition-slow);
+}
+
+.switch input:checked + .slider {
+  background-color: #ccc;
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(16px);
+}
+
+/* =============================================================================
+   Message Area
+   ============================================================================= */
 
 .message-area {
-    padding: 15px;
-    /* 👈 CHANGE 2: Increased height for a longer chat area (e.g., from 400px to 550px) */
-    height: 550px; 
-    overflow-y: auto;
-    margin-bottom: 15px;
-    border-radius: 4px;
-    transition: background-color 0.3s, border-color 0.3s;
-    background-color: var(--body-bg);
-    border: 1px solid var(--border-color);
+  height: var(--message-area-height);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-bg-body);
+  transition: 
+    background-color var(--transition-base),
+    border-color var(--transition-base);
 }
 
 .message-bubble {
-    margin-bottom: 10px; 
-    padding: 10px; 
-    border-radius: 8px; 
-    transition: background-color 0.3s;
+  margin-bottom: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  text-align: left;
+  transition: background-color var(--transition-base);
 }
 
-.input-group {
-    display: flex;
-    gap: 10px;
-}
-
-.meta-buttons {
-    margin-bottom: 10px;
-    display: flex;
-    gap: 10px;
-    justify-content: space-between;
-}
-
-.input-field {
-    flex: 1; 
-    padding: 10px; 
-    font-size: 16px; 
-    border-radius: 8px; 
-    transition: background-color 0.3s, border-color 0.3s, color 0.3s;
-    background-color: var(--main-bg);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-}
-
-/* Message Roles */
+/* User Messages */
 .msg-user {
-    background-color: var(--user-msg-bg);
-    border-left: 3px solid var(--user-msg-border);
-}
-.msg-dm {
-    background-color: var(--dm-msg-bg);
-    border-left: 3px solid var(--dm-msg-border);
+  background-color: var(--color-msg-user-bg);
+  border-left: 3px solid var(--color-msg-user-border);
 }
 
 .role-user {
-    color: var(--user-msg-border);
+  color: var(--color-msg-user-border);
 }
+
+/* DM Messages */
+.msg-dm {
+  background-color: var(--color-msg-dm-bg);
+  border-left: 3px solid var(--color-msg-dm-border);
+}
+
 .role-dm {
-    color: var(--dm-msg-border);
+  color: var(--color-msg-dm-border);
 }
 
-/* --- Base Button Styles --- */
+/* Loading State */
+.loading-indicator {
+  margin-top: var(--space-md);
+  color: var(--color-msg-user-border);
+  font-style: italic;
+}
+
+/* =============================================================================
+   Form Controls
+   ============================================================================= */
+
+.input-group {
+  display: flex;
+  gap: var(--space-md);
+}
+
+.input-field {
+  flex: 1;
+  padding: var(--space-md);
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-main);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: 
+    background-color var(--transition-base),
+    border-color var(--transition-base),
+    color var(--transition-base);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--color-btn-send);
+}
+
+.input-field::placeholder {
+  color: var(--color-border);
+}
+
+/* =============================================================================
+   Buttons
+   ============================================================================= */
+
 button {
-    border: 1px solid transparent;
-    padding: 0.6em 1.2em;
-    font-size: 1em;
-    font-weight: 500;
-    font-family: inherit;
-    background-color: #1a1a1a;
-    cursor: pointer;
-    transition: border-color 0.25s;
-    /* Default/Base radius */
-    border-radius: 8px;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  color: white;
+  background-color: #1a1a1a;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: 
+    border-color var(--transition-fast),
+    opacity var(--transition-fast);
 }
-button:hover {
-    border-color: #646cff;
+
+button:hover:not(:disabled) {
+  border-color: var(--color-focus);
 }
-button:focus,
+
 button:focus-visible {
-    outline: 4px auto -webkit-focus-ring-color;
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
-/* --- New: Rounded Buttons --- */
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .rounded-btn {
-    /* Overrides default radius for a pill-like shape */
-    border-radius: 20px !important; 
+  border-radius: var(--radius-lg);
 }
 
+/* =============================================================================
+   Meta Buttons Section
+   ============================================================================= */
 
-/* --- TOGGLE SWITCH STYLES --- */
-
-/* The switch - the box around the slider */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 40px;
-    height: 24px;
-    margin: 0 5px;
+.meta-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
-/* Hide default checkbox */
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
+.meta-buttons-left {
+  display: flex;
+  gap: var(--space-md);
 }
 
-/* The slider (track) */
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--border-color); /* Uses current border color for track (dark default) */
-    transition: 0.4s;
-    border-radius: 34px;
+/* =============================================================================
+   Scrollbar Styling
+   ============================================================================= */
+
+.message-area::-webkit-scrollbar {
+  width: 8px;
 }
 
-/* The circle (thumb) on the slider */
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: 0.4s;
-    border-radius: 50%;
+.message-area::-webkit-scrollbar-track {
+  background: var(--color-bg-body);
+  border-radius: var(--radius-sm);
 }
 
-/* When checked (light mode is active), move the slider and change track color */
-.switch input:checked + .slider {
-    background-color: #ccc; /* Light mode track color */
+.message-area::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
 }
 
-.switch input:checked + .slider:before {
-    /* Calculates the distance needed to move the thumb to the right side */
-    transform: translateX(16px);
+.message-area::-webkit-scrollbar-thumb:hover {
+  background: var(--color-msg-user-border);
+}
+
+/* =============================================================================
+   Responsive Adjustments
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .dnd-container {
+    width: calc(100% - 20px);
+    padding: var(--space-lg);
+    margin: var(--space-md) 0;
+  }
+
+  .app-header {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  h1 {
+    font-size: 1.25rem;
+  }
+
+  .meta-buttons {
+    flex-direction: column;
+  }
+
+  .meta-buttons-left {
+    justify-content: center;
+  }
+
+  .message-area {
+    height: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  .meta-buttons-left {
+    flex-direction: column;
+  }
+
+  .input-group {
+    flex-direction: column;
+  }
 }

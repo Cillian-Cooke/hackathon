@@ -1,0 +1,48 @@
+{
+  "character": {
+    "name": "Silverheart",
+    "race": "Elf",
+    "class": "Warrior",
+    "background": "A wandering elf who heard the call to adventure.",
+    "stats": {
+      "Strength": 2,
+      "Dexterity": 2,
+      "Intelligence": 7,
+      "Wisdom": 7,
+      "Charisma": 12
+    },
+    "race_abilities": [
+      "Darkvision",
+      "Keen Senses"
+    ],
+    "class_abilities": [
+      "Power Strike",
+      "Shield Block"
+    ]
+  },
+  "created": "2025-12-04T11:31:53.742639",
+  "last_played": "2025-12-04T11:32:44.420244",
+  "history": [
+    {
+      "role": "assistant",
+      "content": "A bone-deep chill permeates the air, even within the brass and iron heart of Frosthold, where the rhythmic *thump-hiss* of pressure regulators barely masks the mournful, icy howls from beyond the thick, steam-heated walls."
+    },
+    {
+      "role": "user",
+      "content": "status"
+    },
+    {
+      "role": "assistant",
+      "content": "You stand on an iron catwalk, the rhythmic *thump-hiss* of a nearby steam engine vibrating through your boots, as your breath mists in the frigid, gaslit air of Frosthold. Outside, the blizzard howls, carrying the faint, dreadful roars of the ice creatures."
+    },
+    {
+      "role": "user",
+      "content": "Is anyone near I yell"
+    },
+    {
+      "role": "assistant",
+      "content": "Your shout briefly cuts through the cacophony of hissing steam and groaning gears, drawing the attention of two grim-faced technicians in grease-stained coveralls who look up from a sputtering pressure gauge, their goggles reflecting the flickering gaslight. Further down the catwalk, a heavily armored guard in a fur-lined, riveted coat slowly turns, his breath pluming in the frigid air."
+    }
+  ],
+  "summary": "A new adventure begins…"
+}
