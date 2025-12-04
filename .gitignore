@@ -81,4 +81,4 @@ Desktop.ini
 *.log
 *.tmp
 *.temp
-.cache/
+.cache/node_modules/
