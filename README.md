@@ -1,256 +1,181 @@
-# Simple Claude CLI Template
+# 🐉 AI Dungeon Master
 
-## Getting Started: Use This Template!
+A web-based D&D adventure game powered by Google's Gemini AI. Experience dynamic, AI-generated storytelling with persistent campaigns, randomized characters, and immersive settings.
 
-**This is a GitHub template repository** - you can create your own copy with one click!
+![Python](https://img.shields.io/badge/Python-3.12+-blue?logo=python&logoColor=white)
+![React](https://img.shields.io/badge/React-18+-61DAFB?logo=react&logoColor=black)
+![Gemini](https://img.shields.io/badge/Gemini-AI-4285F4?logo=google&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-### How to Create Your Own Repository:
+## ✨ Features
 
-1. **Click the "Use this template" button** at the top of this GitHub page (green button)
-2. **Choose "Create a new repository"**
-3. **Name your repository** (e.g., "my-hackathon-project")
-4. **Choose Public or Private** (your choice!)
-5. **Click "Create repository"**
+- **AI-Powered Dungeon Master** — Dynamic storytelling that adapts to your choices
+- **Randomized Adventures** — Each reset generates new characters, settings, and themes
+- **Persistent Campaigns** — Your progress is automatically saved
+- **Multiple Themes** — Medieval Fantasy, Steampunk, Sci-Fi, Post-Apocalyptic, and more
+- **Character Variety** — Random races (Human, Elf, Dwarf, Orc) and classes (Warrior, Mage, Rogue, Engineer, Cleric)
+- **Dark/Light Mode** — Toggle between themes for comfortable play
+- **CLI & Web Modes** — Play in your terminal or browser
 
-🎉 **Done!** You now have your own copy of this template that you can customize!
+## 📋 Prerequisites
 
-### Next Steps:
+- Python 3.12 or higher
+- Node.js 18+ and npm
+- Google Gemini API key
 
-Now that you have your own repository:
-1. **Clone it to your computer**: `git clone <your-repo-url>`
-2. **Follow the setup instructions below** to get Claude AI working
-3. **Start customizing** for your hackathon project!
+## 🚀 Getting Started
 
----
+### 1. Clone the Repository
 
-## 📦 Setup (5 minutes)
-
-**Now that you have your own repository, let's get it running!**
-
-### Step 1: Get Your API Key
-
-1. Go to [https://console.anthropic.com/](https://console.anthropic.com/)
-2. Sign up (As TCD Claude Builder, you have free API credits!)
-3. Click "Get API Keys"
-4. Copy your API key (it looks like: `sk-ant-...`)
-
-### Step 2: Install Python (if you don't have it)
-
-**Check if you have Python:**
 ```bash
-python --version
+git clone https://github.com/Cillian-Cooke/hackathon.git
+cd hackathon
 ```
 
-If you see `Python 3.7` or higher, you're good! If not:
-- **Windows**: Download from [python.org](https://python.org)
-- **Mac**: `brew install python3` or download from [python.org](https://python.org)
-- **Linux**: You're using Linux...You don't need this
+### 2. Set Up Environment Variables
 
-### Step 3: Clone Your Repository
-
-If you created your own repository using the template (recommended):
+Create a `.env` file in the project root:
 
 ```bash
-git clone <your-repo-url>
-cd <your-repo-name>
+touch .env
 ```
 
-Or if you're just trying this out:
+Add your Gemini API key to the `.env` file:
 
-```bash
-# Download as ZIP from GitHub and unzip it
-# OR
-git clone <this-template-url>
-cd CLI-template
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-### Step 4: Install Required Libraries
+> **📝 Getting a Gemini API Key:**
+> 1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
+> 2. Sign in with your Google account
+> 3. Click "Create API Key"
+> 4. Copy the key and paste it in your `.env` file
+
+### 3. Install Python Dependencies
 
 ```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On macOS/Linux:
+source venv/bin/activate
+# On Windows:
+venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-This installs:
-- `anthropic` - Claude API library
-- `python-dotenv` - For managing your API key safely
+### 4. Install Frontend Dependencies
 
-### Step 5: Add Your API Key
+```bash
+npm install
+```
 
-1. Copy the example file:
-   ```bash
-   cp .env.example .env
-   ```
+## 🎮 Running the Game
 
-2. Open `.env` in any text editor (Notepad, VS Code, etc.)
+### Web Mode (Recommended)
 
-3. Replace `your_api_key_here` with your actual API key:
-   ```
-   ANTHROPIC_API_KEY=sk-ant-your-actual-key-here
-   ```
+Start both the backend server and frontend in separate terminals:
 
-4. Save the file
+**Terminal 1 — Backend:**
+```bash
+source venv/bin/activate  # If not already activated
+uvicorn server:app --reload
+```
 
-**⚠️ IMPORTANT**: Never share your `.env` file or commit it to GitHub!
+**Terminal 2 — Frontend:**
+```bash
+cd my-react-app
+npm run dev
+```
+
+Open your browser to `http://localhost:5173`
+
+### CLI Mode
+
+For a terminal-based experience:
+
+```bash
+source venv/bin/activate
+python cli.py
+```
+
+## 🎯 How to Play
+
+1. **Start** — The AI Dungeon Master sets the scene
+2. **Type Actions** — Enter what your character does (e.g., "I search the room", "Attack the goblin")
+3. **Special Commands:**
+   - `📖 Summary of Story` — Get a recap of your adventure
+   - `👤 Player Status` — View your character's stats and abilities
+   - `🔥 Reset Campaign` — Start a completely new adventure
+
+## 🏗️ Project Structure
+
+```
+ai-dungeon-master/
+├── my-react-app/       # Node Modules and React Deps
+│   └── src/ 
+│       └── main.jsx    # React application entry
+├── cli.py              # CLI game engine & DM logic
+├── server.py           # FastAPI backend server
+├── style.css           # Application styles
+├── index.html          # HTML entry point
+├── .env                # Environment variables (create this)
+├── .gitignore          # Git ignore rules
+├── requirements.txt    # Python dependencies
+├── package.json        # Node dependencies
+└── README.md           # This file
+```
+
+## 📦 Dependencies
+
+### Python
+- `fastapi` — Web framework for the API
+- `uvicorn` — ASGI server
+- `google-genai` — Gemini AI SDK
+- `python-dotenv` — Environment variable management
+- `pydantic` — Data validation
+
+### Frontend
+- `react` — UI framework
+- `react-icons` — Icon components
+- `vite` — Build tool and dev server
+
+## 🔧 Configuration
+
+The game can be customized by modifying constants in `cli.py`:
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `GEMINI_MODEL` | AI model to use | `gemini-2.5-flash` |
+| `TOTAL_STAT_POINTS` | Points for character stats | `30` |
+| `max_output_tokens` | Response length limit | `2048` |
+
+## 🤝 Contributing
+
+Contributions are welcome! Feel free to:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [Google Gemini](https://deepmind.google/technologies/gemini/) for the AI capabilities
+- [FastAPI](https://fastapi.tiangolo.com/) for the excellent Python web framework
+- [Vite](https://vitejs.dev/) for the blazing fast frontend tooling
 
 ---
 
-## 🎮 How to Use
-
-### 1. Ask Claude a Question
-
-```bash
-python cli.py ask "What is the meaning of life?"
-```
-
-```bash
-python cli.py ask "Explain quantum computing in simple terms"
-```
-
-### 2. Chat with Claude (Interactive Mode)
-
-```bash
-python cli.py chat
-```
-
-Then just type your messages! Type `quit` or `exit` to end the conversation.
-
-Example conversation:
-```
-💬 Starting chat with Claude!
-Type 'quit' or 'exit' to end the conversation
---------------------------------------------------
-
-😊 You: Hi! Can you help me with my hackathon project?
-
-🤖 Claude: Of course! I'd love to help with your hackathon project...
-
-😊 You: I want to build a weather app
-
-🤖 Claude: Great idea! Here's how you could approach it...
-
-😊 You: quit
-
-👋 Goodbye! Thanks for chatting!
-```
-
-### 3. Analyze a File
-
-```bash
-python cli.py analyze mycode.py
-```
-
-This sends the file contents to Claude and asks for an analysis!
-
-### 4. Get Help
-
-```bash
-python cli.py help
-```
-
----
-
-## 🎨 Customization Ideas for Your Hackathon
-
-Here are some easy ways to customize this for your project:
-
-### 1. Change Claude's Personality
-
-In `cli.py`, modify the `ask()` method to add a system prompt:
-
-```python
-# Make Claude a pirate
-system_prompt = "You are a friendly pirate. Always talk like a pirate!"
-answer = cli.ask("What is Python?", system_prompt=system_prompt)
-```
-
-### 2. Create Your Own Command
-
-Add a new method to the `ClaudeCLI` class:
-
-```python
-def summarize(self, text):
-    """Summarize any text"""
-    question = f"Summarize this in 3 bullet points:\n\n{text}"
-    return self.ask(question)
-```
-
-Then add it to the `main()` function:
-
-```python
-elif command == 'summarize':
-    text = ' '.join(sys.argv[2:])
-    result = cli.summarize(text)
-    print(f"\n📝 Summary:\n{result}\n")
-```
-
-### 3. Build a Specific Tool
-
-Some ideas:
-- **Code Reviewer**: Analyze code and suggest improvements
-- **Story Generator**: Create stories from prompts
-- **Study Buddy**: Explain concepts and quiz you
-- **Recipe Helper**: Suggest recipes from ingredients
-- **Language Tutor**: Practice conversations in any language
-
-### 4. Change the Model
-
-In the `__init__` method, change this line:
-
-```python
-self.model = "claude-3-5-sonnet-20241022"  # Fast and smart
-
-# Other options:
-# self.model = "claude-3-5-haiku-20241022"  # Faster, cheaper
-# self.model = "claude-3-opus-20240229"      # Most powerful
-```
-
----
-
-## 🐛 Troubleshooting
-
-### "ANTHROPIC_API_KEY not found"
-- Make sure you created the `.env` file (copy from `.env.example`)
-- Check that your API key is correct
-- Make sure there are no spaces around the `=` sign
-
-### "Module not found" error
-- Run `pip install -r requirements.txt` again
-- Try `pip3` instead of `pip`
-- Make sure you're in the right directory
-
-### "Permission denied"
-- On Mac/Linux, try: `chmod +x cli.py`
-- Or just use: `python cli.py` instead of `./cli.py`
-
-### Rate limit errors
-- You're making too many requests
-- Wait a few seconds between requests
-- Check your API usage at [console.anthropic.com](https://console.anthropic.com/)
-
----
-
-## 📚 Learn More
-
-- **Claude API Docs**: [https://docs.anthropic.com/](https://docs.anthropic.com/)
-- **Python Tutorial**: [https://docs.python.org/3/tutorial/](https://docs.python.org/3/tutorial/)
-- **API Pricing**: [https://www.anthropic.com/pricing](https://www.anthropic.com/pricing)
-
-## 💡 Hackathon Tips
-
-1. **Start Simple**: Get the basic CLI working first, then add features
-2. **Test Often**: Try your commands frequently to catch bugs early
-3. **Ask Claude**: Use Claude itself to help you code! (`python cli.py ask "How do I add colors to terminal output?"`)
-4. **Add Comments**: Help your teammates understand your code
-5. **Have Fun**: Build something weird and creative!
-
-## 📝 Project Structure
-
-```
-CLI-template/
-├── cli.py              # Main file - all the code is here!
-├── requirements.txt    # Python libraries needed
-├── .env.example        # Template for API key
-├── .env               # Your actual API key (never commit this!)
-├── .gitignore         # Keeps secrets safe
-└── README.md          # This file!
-```
+<p align="center">
+  Made with ❤️ for tabletop RPG enthusiasts
+</p>
