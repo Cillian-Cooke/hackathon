@@ -14,6 +14,8 @@ This project was built at the [**Claude Builder Club @ TCD Hackathon**](https://
 - 🥇 **Best Team Collaboration**
 - 🎨 **Most Creative Use of Claude**
 
+It has since been moved from Claude to Google Gemini due to costs.
+
 ---
 
 ## ✨ Features
