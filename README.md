@@ -7,6 +7,15 @@ A web-based D&D adventure game powered by Google's Gemini AI. Experience dynamic
 ![Gemini](https://img.shields.io/badge/Gemini-AI-4285F4?logo=google&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
+## 🏆 Hackathon Winner
+
+This project was built at the [**Claude Builder Club @ TCD Hackathon**](https://cbc-at-trinity-hackathon.devpost.com/) (December 2025) and won:
+
+- 🥇 **Best Team Collaboration**
+- 🎨 **Most Creative Use of Claude**
+
+---
+
 ## ✨ Features
 
 - **AI-Powered Dungeon Master** — Dynamic storytelling that adapts to your choices
@@ -71,6 +80,7 @@ pip install -r requirements.txt
 ### 4. Install Frontend Dependencies
 
 ```bash
+cd my-react-app
 npm install
 ```
 
@@ -115,7 +125,7 @@ python cli.py
 ## 🏗️ Project Structure
 
 ```
-ai-dungeon-master/
+hackathon/
 ├── my-react-app/       # Node Modules and React Deps
 │   └── src/ 
 │       └── main.jsx    # React application entry
@@ -170,8 +180,13 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## 🙏 Acknowledgments
 
+- [Claude Builder Club @ TCD](https://www.instagram.com/cbcattrinity/) for hosting the hackathon
 - [Google Gemini](https://deepmind.google/technologies/gemini/) for the AI capabilities
 - [FastAPI](https://fastapi.tiangolo.com/) for the excellent Python web framework
 - [Vite](https://vitejs.dev/) for the blazing fast frontend tooling
 
 ---
+
+<p align="center">
+  Made with ❤️ at the Claude Builder Club @ TCD Hackathon
+</p>
