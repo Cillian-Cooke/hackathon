@@ -175,7 +175,3 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 - [Vite](https://vitejs.dev/) for the blazing fast frontend tooling
 
 ---
-
-<p align="center">
-  Made with ❤️ for tabletop RPG enthusiasts
-</p>
